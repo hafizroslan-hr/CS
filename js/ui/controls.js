@@ -4,13 +4,23 @@ import { input } from '../engine/input.js';
 import { settings, saveSettings } from '../storage.js';
 
 const DEFAULT_LAYOUT = {
-  stick:  { x: 14, y: 68, s: 1 },
-  jump:   { x: 90, y: 68, s: 1 },
-  crouch: { x: 79, y: 85, s: 1 },
-  pause:  { x: 95, y: 10, s: 1 }
+  stick:   { x: 14, y: 66, s: 1 },
+  fire:    { x: 86, y: 58, s: 1 },
+  aim:     { x: 95, y: 34, s: 0.85 },
+  reload:  { x: 74, y: 70, s: 0.85 },
+  weapon:  { x: 84, y: 30, s: 0.85 },
+  grenade: { x: 73, y: 44, s: 0.85 },
+  jump:    { x: 94, y: 84, s: 0.9 },
+  crouch:  { x: 82, y: 88, s: 0.85 },
+  pause:   { x: 96, y: 9, s: 1 }
 };
 const DEFS = [
   { id: 'stick', type: 'stick' },
+  { id: 'fire', type: 'btn', label: 'FIRE', cls: 'fire' },
+  { id: 'aim', type: 'btn', label: 'AIM' },
+  { id: 'reload', type: 'btn', label: 'RELOAD' },
+  { id: 'weapon', type: 'btn', label: 'WEAPON' },
+  { id: 'grenade', type: 'btn', label: 'GREN' },
   { id: 'jump', type: 'btn', label: 'JUMP' },
   { id: 'crouch', type: 'btn', label: 'CROUCH' },
   { id: 'pause', type: 'btn', label: 'II', small: true }
@@ -27,7 +37,7 @@ export class TouchControls {
 
     for (const d of DEFS) {
       const el = document.createElement('div');
-      el.className = 'tc ' + (d.type === 'stick' ? 'tc-stick' : 'tc-btn' + (d.small ? ' small' : ''));
+      el.className = 'tc ' + (d.type === 'stick' ? 'tc-stick' : 'tc-btn' + (d.small ? ' small' : '') + (d.cls ? ' ' + d.cls : ''));
       el.dataset.id = d.id;
       if (d.type === 'stick') el.innerHTML = '<div class="tc-knob"></div>'; else el.textContent = d.label;
       layer.appendChild(el); this.els[d.id] = el;
@@ -64,7 +74,8 @@ export class TouchControls {
   // drop every active touch (pause, blur, orientation change)
   release() {
     this.ptr.clear(); this.stickPtr = this.lookPtr = null;
-    input.stickX = input.stickY = 0; input.touchJump = false;
+    input.stickX = input.stickY = 0; input.touchJump = input.touchFire = false;
+    this.els.aim.classList.toggle('latched', input.aimToggle); this.els.crouch.classList.toggle('latched', input.crouchToggle);
     this.els.stick.firstChild.style.transform = '';
     for (const id in this.els) this.els[id].classList.remove('on');
     this.applyLayout();
@@ -84,8 +95,13 @@ export class TouchControls {
       const id = tc.dataset.id;
       if (id === 'stick') { if (this.stickPtr === null) this.startStick(e, false); return; }
       tc.classList.add('on');
-      this.ptr.set(e.pointerId, { kind: 'btn', id });
+      this.ptr.set(e.pointerId, { kind: 'btn', id, x: e.clientX, y: e.clientY });
       if (id === 'jump') input.touchJump = true;
+      else if (id === 'fire') input.touchFire = true;
+      else if (id === 'aim') { input.aimToggle = !input.aimToggle; tc.classList.toggle('latched', input.aimToggle); }
+      else if (id === 'reload') input.actions.push('reload');
+      else if (id === 'weapon') input.actions.push('next');
+      else if (id === 'grenade') input.actions.push('grenade');
       else if (id === 'crouch') { input.crouchToggle = !input.crouchToggle; tc.classList.toggle('latched', input.crouchToggle); }
       else if (id === 'pause') this.onPause();
       return;
@@ -124,7 +140,7 @@ export class TouchControls {
     if (!st) return;
     e.preventDefault();
     if (st.kind === 'stick') this.updateStick(st, e);
-    else if (st.kind === 'look') {
+    else if (st.kind === 'look' || (st.kind === 'btn' && st.id === 'fire')) {   // dragging from FIRE also aims
       const k = TOUCH_LOOK * settings.lookSens;
       input.lookX += (e.clientX - st.x) * k; input.lookY += (e.clientY - st.y) * k;
       st.x = e.clientX; st.y = e.clientY;
@@ -147,6 +163,7 @@ export class TouchControls {
     else if (st.kind === 'btn') {
       this.els[st.id].classList.remove('on');
       if (st.id === 'jump') input.touchJump = false;
+      else if (st.id === 'fire') input.touchFire = false;
     } else if (st.kind === 'drag') saveSettings();
   }
 

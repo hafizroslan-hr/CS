@@ -19,6 +19,8 @@ const SETTINGS = [
   { key: 'stickSens', label: 'JOYSTICK SENS.', range: [0.5, 2, 0.1] },
   { key: 'mouseSens', label: 'MOUSE SENS.', range: [0.3, 3, 0.1] },
   { key: 'invertY', label: 'INVERT LOOK Y', values: ONOFF },
+  { key: 'masterVol', label: 'MASTER VOLUME', range: [0, 1, 0.05], pct: true },
+  { key: 'sfxVol', label: 'SOUND EFFECTS', range: [0, 1, 0.05], pct: true },
   { key: 'showFps', label: 'FPS COUNTER (DEV)', values: ONOFF }
 ];
 
@@ -31,8 +33,9 @@ function buildOptions(container, schema, store, onChange) {
     if (o.range) {
       row.innerHTML = `${label}<input type="range" min="${o.range[0]}" max="${o.range[1]}" step="${o.range[2]}"><span class="opt-val"></span>`;
       const inp = row.querySelector('input'), val = row.querySelector('.opt-val');
-      inp.value = store[o.key]; val.textContent = (+store[o.key]).toFixed(1);
-      inp.addEventListener('input', () => { store[o.key] = +inp.value; val.textContent = (+inp.value).toFixed(1); onChange(o.key); });
+      const fmt = v => o.pct ? Math.round(v * 100) + '%' : (+v).toFixed(1);
+      inp.value = store[o.key]; val.textContent = fmt(store[o.key]);
+      inp.addEventListener('input', () => { store[o.key] = +inp.value; val.textContent = fmt(inp.value); onChange(o.key); });
     } else {
       row.innerHTML = `${label}<button aria-label="previous">◀</button><span class="opt-val"></span><button aria-label="next">▶</button>`;
       const val = row.querySelector('.opt-val'), btns = row.querySelectorAll('button');
@@ -78,6 +81,8 @@ export class Menu {
     document.getElementById('btn-resume').addEventListener('click', () => handlers.onResume());
     document.getElementById('btn-respawn').addEventListener('click', () => handlers.onRespawn());
     document.getElementById('btn-quit').addEventListener('click', () => handlers.onQuit());
+    document.getElementById('btn-again').addEventListener('click', () => handlers.onStart());
+    document.getElementById('btn-result-quit').addEventListener('click', () => handlers.onQuit());
     document.getElementById('btn-edit-layout').addEventListener('click', () => handlers.onEditLayout());
     document.getElementById('btn-edit-layout2').addEventListener('click', () => handlers.onEditLayout());
     document.getElementById('btn-reset-settings').addEventListener('click', () => {
@@ -111,6 +116,18 @@ export class Menu {
       } else card.disabled = true;
       list.appendChild(card);
     }
+  }
+
+  showResult(r, teamNames) {
+    const t = document.getElementById('result-title');
+    const draw = r.winner === 'draw', win = r.winner === r.playerTeam;
+    t.textContent = draw ? 'DRAW' : win ? 'VICTORY' : 'DEFEAT';
+    t.classList.toggle('lose', !win && !draw);
+    const other = r.playerTeam === 'att' ? 'def' : 'att';
+    document.getElementById('result-score').textContent = `${r.score[r.playerTeam]} : ${r.score[other]}`;
+    document.getElementById('result-stats').textContent =
+      `${teamNames[r.playerTeam]} vs ${teamNames[other]} — your kills ${r.kills}, deaths ${r.deaths}`;
+    this.open('result');
   }
 
   _show(name) {

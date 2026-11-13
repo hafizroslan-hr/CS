@@ -19,3 +19,26 @@ export function multiply(out, a, b) {
 
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 export const lerp = (a, b, t) => a + (b - a) * t;
+
+// ---- in-place affine helpers (post-multiply): m = m * T ------------------------------
+export function identity(m) { m.fill(0); m[0] = m[5] = m[10] = m[15] = 1; return m; }
+export function translate(m, x, y, z) {
+  m[12] += m[0] * x + m[4] * y + m[8] * z;
+  m[13] += m[1] * x + m[5] * y + m[9] * z;
+  m[14] += m[2] * x + m[6] * y + m[10] * z;
+  return m;
+}
+function rot(m, a, i, j, sign) {   // rotate columns i,j
+  const c = Math.cos(a), s = Math.sin(a) * sign;
+  for (let k = 0; k < 3; k++) {
+    const p = m[i * 4 + k], q = m[j * 4 + k];
+    m[i * 4 + k] = p * c + q * s;
+    m[j * 4 + k] = -p * s + q * c;
+  }
+  return m;
+}
+export const rotX = (m, a) => rot(m, a, 1, 2, 1);    // positive pitches -Z (forward) upward
+export const rotY = (m, a) => rot(m, a, 0, 2, -1);   // positive turns -Z toward -X (left), same as yaw
+export const rotZ = (m, a) => rot(m, a, 0, 1, 1);
+export const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+export const rand = (a, b) => a + Math.random() * (b - a);

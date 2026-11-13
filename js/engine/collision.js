@@ -51,7 +51,7 @@ export class CollisionWorld {
   raycast(ox, oy, oz, dx, dy, dz, maxT) {
     const B = this.b;
     let best = maxT;
-    const ix = 1 / dx, iy = 1 / dy, iz = 1 / dz;
+    const ix = 1 / (dx || 1e-9), iy = 1 / (dy || 1e-9), iz = 1 / (dz || 1e-9);
     for (let i = 0; i < this.n; i++) {
       const o = i * 6;
       let t0 = (B[o] - ox) * ix, t1 = (B[o + 3] - ox) * ix;
@@ -64,4 +64,16 @@ export class CollisionWorld {
     }
     return best;
   }
+}
+
+// Ray vs one axis-aligned box. Returns entry distance or Infinity.
+export function rayAABB(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1) {
+  const ix = 1 / (dx || 1e-9), iy = 1 / (dy || 1e-9), iz = 1 / (dz || 1e-9);
+  let a = (x0 - ox) * ix, b = (x1 - ox) * ix;
+  let tmin = Math.min(a, b), tmax = Math.max(a, b);
+  a = (y0 - oy) * iy; b = (y1 - oy) * iy;
+  tmin = Math.max(tmin, Math.min(a, b)); tmax = Math.min(tmax, Math.max(a, b));
+  a = (z0 - oz) * iz; b = (z1 - oz) * iz;
+  tmin = Math.max(tmin, Math.min(a, b)); tmax = Math.min(tmax, Math.max(a, b));
+  return tmax >= Math.max(tmin, 0) ? Math.max(tmin, 0) : Infinity;
 }

@@ -9,6 +9,8 @@ export const DEFAULT_SETTINGS = {
   stickSens: 1,          // joystick sensitivity
   mouseSens: 1,
   invertY: false,
+  masterVol: 0.8,
+  sfxVol: 1,
   layout: {}             // touch control overrides: id -> {x,y,s}
 };
 

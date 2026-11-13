@@ -5,7 +5,8 @@ export const input = {
   keys: new Set(),
   stickX: 0, stickY: 0,        // touch joystick, -1..1 (Y: forward positive)
   lookX: 0, lookY: 0,          // accumulated look delta in radians
-  touchJump: false,
+  touchJump: false, touchFire: false, mouseFire: false, mouseAim: false, aimToggle: false,
+  actions: [],                 // queued one-shot actions: 'reload' | 'next' | 'prev' | 'grenade' | 'slotN'
   crouchToggle: false,
   pointerLocked: false,
   enabled: false,              // gameplay input accepted
@@ -21,9 +22,11 @@ export const input = {
   },
   jump() { return this.keys.has('Space') || this.touchJump; },
   crouch() { return this.keys.has('KeyC') || this.keys.has('ControlLeft') || this.crouchToggle; },
+  fire() { return this.touchFire || this.mouseFire; },
+  aim() { return this.mouseAim || this.aimToggle; },
   clear() {
     this.keys.clear(); this.stickX = this.stickY = 0; this.lookX = this.lookY = 0;
-    this.touchJump = false;
+    this.touchJump = this.touchFire = this.mouseFire = this.mouseAim = false; this.actions.length = 0;
   }
 };
 
@@ -31,6 +34,12 @@ export function initInput(canvas, { onEscape, onLockLost }) {
   window.addEventListener('keydown', e => {
     if (e.code === 'Escape') { onEscape(); return; }
     if (!input.enabled) return;
+    if (!e.repeat) {
+      if (e.code === 'KeyR') input.actions.push('reload');
+      else if (e.code === 'KeyG') input.actions.push('grenade');
+      else if (e.code === 'KeyQ') input.actions.push('next');
+      else if (/^Digit[1-9]$/.test(e.code)) input.actions.push('slot' + e.code[5]);
+    }
     input.keys.add(e.code);
     if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
   });
@@ -52,6 +61,17 @@ export function initInput(canvas, { onEscape, onLockLost }) {
     input.lookX += e.movementX * k;
     input.lookY += e.movementY * k;
   });
+  canvas.addEventListener('mousedown', e => {
+    if (!input.pointerLocked || !input.enabled) return;
+    if (e.button === 0) input.mouseFire = true; else if (e.button === 2) input.mouseAim = true;
+  });
+  window.addEventListener('mouseup', e => {
+    if (e.button === 0) input.mouseFire = false; else if (e.button === 2) input.mouseAim = false;
+  });
+  canvas.addEventListener('wheel', e => {
+    if (input.enabled) input.actions.push(e.deltaY > 0 ? 'next' : 'prev');
+    e.preventDefault();
+  }, { passive: false });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 }
 

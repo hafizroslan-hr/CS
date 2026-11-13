@@ -21,9 +21,18 @@
 <canvas id="gl"></canvas>
 
 <div id="hud" class="hidden">
+  <div id="scope" class="hidden"></div>
+  <div id="hud-damage"></div>
   <div id="hud-zone"></div>
+  <div id="hud-top"><span id="score-own"></span><span id="hud-timer"></span><span id="score-enemy"></span></div>
   <div id="hud-fps" class="hidden"></div>
-  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="hud-feed"></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="hitmarker"></div>
+  <div id="hud-msg" class="hidden"></div>
+  <div id="hud-slots" class="hidden"></div>
+  <div id="hud-vitals"><div><small>HEALTH</small><b id="hud-health">100</b></div><div><small>ARMOR</small><b id="hud-armor">0</b></div></div>
+  <div id="hud-weapon"><small id="hud-wname"></small><div><b id="hud-ammo"></b><span id="hud-reserve"></span></div><small id="hud-gren"></small></div>
   <div id="hud-hint" class="hidden"></div>
 </div>
 
@@ -41,7 +50,7 @@
         <button data-go="controls">CONTROLS</button>
         <button data-go="about">ABOUT</button>
       </nav>
-      <p class="build">BUILD 0.1 — PHASE 1 FOUNDATION</p>
+      <p class="build">BUILD 0.2 — PHASE 2 COMBAT</p>
     </div>
   </section>
 
@@ -49,8 +58,8 @@
     <div class="panel wide scroll">
       <h2>MATCH SETUP</h2>
       <div id="setup-options" class="options"></div>
-      <p class="note">Phase 1 build: MAP and TEAM take effect now (free-roam deployment).
-      Mode, bots, difficulty, timers and money are saved and become active when combat and rounds land in Phases 2–3.</p>
+      <p class="note">Phase 2 build: every mode currently plays as a team skirmish with respawns — first team to the kill limit
+      (set by MATCH LENGTH) or ahead when the clock (4 × ROUND TIME) runs out wins. Bomb objectives, rounds and money arrive in Phase 3.</p>
       <div class="row-buttons">
         <button data-back>BACK</button>
         <button id="btn-start" class="primary">DEPLOY</button>
@@ -87,8 +96,12 @@
           <table class="keys">
             <tr><td>Left stick</td><td>Move (touch anywhere on the left side)</td></tr>
             <tr><td>Drag right side</td><td>Look / aim</td></tr>
-            <tr><td>JUMP</td><td>Jump</td></tr>
-            <tr><td>CROUCH</td><td>Toggle crouch</td></tr>
+            <tr><td>FIRE</td><td>Shoot (hold); drag while holding to aim</td></tr>
+            <tr><td>AIM</td><td>Toggle aim / scope</td></tr>
+            <tr><td>RELOAD</td><td>Reload</td></tr>
+            <tr><td>WEAPON</td><td>Next weapon</td></tr>
+            <tr><td>GREN</td><td>Throw grenade</td></tr>
+            <tr><td>JUMP / CROUCH</td><td>Jump / toggle crouch</td></tr>
             <tr><td>II</td><td>Pause</td></tr>
           </table>
         </div>
@@ -97,13 +110,17 @@
           <table class="keys">
             <tr><td>W A S D</td><td>Move</td></tr>
             <tr><td>Mouse</td><td>Look (click to capture)</td></tr>
-            <tr><td>Space</td><td>Jump</td></tr>
-            <tr><td>C / Ctrl</td><td>Crouch</td></tr>
+            <tr><td>Left click</td><td>Shoot</td></tr>
+            <tr><td>Right click</td><td>Aim / scope (hold)</td></tr>
+            <tr><td>R</td><td>Reload</td></tr>
+            <tr><td>1–6 / wheel / Q</td><td>Select weapon</td></tr>
+            <tr><td>G</td><td>Throw grenade</td></tr>
+            <tr><td>Space · C</td><td>Jump · crouch</td></tr>
             <tr><td>Esc</td><td>Pause</td></tr>
           </table>
         </div>
       </div>
-      <p class="note">Fire, aim, reload, weapon, grenade and interact controls are added with the combat systems in Phase 2. Every touch control can be moved and resized.</p>
+      <p class="note">Every touch control can be moved and resized. The interact button arrives with bomb objectives in Phase 3.</p>
       <div class="row-buttons">
         <button data-back>BACK</button>
         <button id="btn-edit-layout2">EDIT TOUCH LAYOUT</button>
@@ -118,7 +135,7 @@
       native WebGL 2, vanilla JavaScript, no engine, no frameworks, no server.</p>
       <p>All maps, textures, models and sounds are original and generated procedurally at load time.
       Two fictional factions — INSURGENTS and TASK FORCE — fight over bomb sites with computer-controlled squads.</p>
-      <p class="note">Current build: Phase 1 (engine, first map, movement, touch controls). See README for the roadmap.</p>
+      <p class="note">Current build: Phase 2 (weapons, bots, combat, sound). See README for the roadmap.</p>
       <div class="row-buttons"><button data-back>BACK</button></div>
     </div>
   </section>
@@ -132,6 +149,18 @@
         <button data-go="settings">SETTINGS</button>
         <button data-go="controls">CONTROLS</button>
         <button id="btn-quit">MAIN MENU</button>
+      </nav>
+    </div>
+  </section>
+
+  <section class="screen hidden" data-screen="result">
+    <div class="panel scroll">
+      <h2 id="result-title">VICTORY</h2>
+      <p id="result-score" class="result-score"></p>
+      <p id="result-stats"></p>
+      <nav class="menu-list">
+        <button id="btn-again" class="primary">PLAY AGAIN</button>
+        <button id="btn-result-quit">MAIN MENU</button>
       </nav>
     </div>
   </section>

@@ -19,3 +19,4 @@
 .tc-toolbar button{height:34px;min-width:44px;padding:0 10px;background:var(--panel2);border:1px solid var(--line);
   font-size:13px;letter-spacing:.12em;color:var(--text)}
 .tc-toolbar button:active{color:var(--accent)}
+.tc-btn.fire{width:78px;height:78px;border-color:rgba(232,115,92,.75);color:#ffd9cf}

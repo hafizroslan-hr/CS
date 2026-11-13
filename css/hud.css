@@ -12,3 +12,54 @@
 #crosshair i:nth-child(2){width:2px;height:8px;left:-1px;top:6px}
 #crosshair i:nth-child(3){width:8px;height:2px;left:-14px;top:-1px}
 #crosshair i:nth-child(4){width:8px;height:2px;left:6px;top:-1px}
+
+#crosshair{--gap:6px}
+#crosshair i:nth-child(1){top:calc(-8px - var(--gap))}
+#crosshair i:nth-child(2){top:var(--gap)}
+#crosshair i:nth-child(3){left:calc(-8px - var(--gap))}
+#crosshair i:nth-child(4){left:var(--gap)}
+#crosshair b{position:absolute;width:2px;height:2px;left:-1px;top:-1px;background:#e9f0c8}
+#hitmarker{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;opacity:0;transform:rotate(45deg);
+  background:linear-gradient(#fff,#fff) center/2px 100% no-repeat,linear-gradient(#fff,#fff) center/100% 2px no-repeat;
+  -webkit-mask:radial-gradient(circle,transparent 5px,#000 6px);mask:radial-gradient(circle,transparent 5px,#000 6px)}
+#hitmarker.show{animation:hm .22s ease-out}
+#hitmarker.head{filter:drop-shadow(0 0 2px #f33) brightness(1) sepia(1) saturate(8) hue-rotate(-30deg)}
+@keyframes hm{0%{opacity:1;transform:rotate(45deg) scale(1.3)}100%{opacity:0;transform:rotate(45deg) scale(.9)}}
+#hud-damage{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(200,30,20,.6) 100%)}
+#hud-damage.show{animation:dmg .5s ease-out}
+@keyframes dmg{0%{opacity:1}100%{opacity:0}}
+#scope{position:absolute;inset:0;background:
+  linear-gradient(#000,#000) center/1px 100% no-repeat,linear-gradient(#000,#000) center/100% 1px no-repeat,
+  radial-gradient(circle at center,transparent 0,transparent 38vh,#000 38.6vh)}
+#hud-top{position:absolute;left:50%;top:calc(8px + env(safe-area-inset-top));transform:translateX(-50%);display:flex;gap:2px;
+  font:13px var(--mono);letter-spacing:.08em}
+#hud-top span{background:rgba(12,14,16,.6);padding:5px 10px;min-width:54px;text-align:center}
+#score-own{color:#7fd08c;border-bottom:2px solid #7fd08c}
+#score-enemy{color:#e8735c;border-bottom:2px solid #e8735c}
+#hud-timer{color:var(--text)}
+#hud-fps{top:calc(40px + env(safe-area-inset-top))}
+#hud-feed{position:absolute;right:calc(64px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));display:flex;flex-direction:column;
+  align-items:flex-end;gap:3px;font:11px var(--mono);letter-spacing:.04em}
+#hud-feed div{background:rgba(12,14,16,.6);padding:3px 7px;white-space:nowrap}
+#hud-feed div.me{outline:1px solid var(--accent)}
+#hud-feed .own{color:#7fd08c}#hud-feed .enemy{color:#e8735c}#hud-feed em{color:var(--dim);font-style:normal;margin:0 6px}
+#hud-vitals{position:absolute;left:calc(14px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:6px}
+#hud-vitals div,#hud-weapon{background:rgba(12,14,16,.55);border-left:2px solid var(--accent);padding:4px 10px 5px}
+#hud small{display:block;font:9px var(--mono);letter-spacing:.14em;color:var(--dim)}
+#hud-vitals b,#hud-ammo{font:700 26px var(--font);letter-spacing:.04em;color:var(--accent2)}
+#hud-vitals b.low{color:#e8735c}
+#hud-weapon{position:absolute;right:calc(14px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));text-align:right;
+  border-left:0;border-right:2px solid var(--accent)}
+#hud-reserve{font:14px var(--mono);color:var(--text);margin-left:6px}
+#hud-ammo.low{color:#e8735c}
+#hud-msg{position:absolute;left:50%;top:24%;transform:translateX(-50%);white-space:nowrap;font:15px var(--font);letter-spacing:.2em;
+  color:var(--accent2);background:rgba(12,14,16,.7);border:1px solid var(--line);padding:8px 16px}
+#hud-slots{position:absolute;left:50%;top:calc(44px + env(safe-area-inset-top));transform:translateX(-50%);display:flex;gap:3px}
+#hud-slots div{background:rgba(12,14,16,.65);border:1px solid var(--line);padding:3px 8px;font:10px var(--mono);color:var(--dim);white-space:nowrap}
+#hud-slots div b{color:var(--text);margin-right:5px}
+#hud-slots div.cur{border-color:var(--accent);color:var(--accent2)}
+#hud-slots div.empty{opacity:.45}
+@media (max-width:700px){ #hud-slots div span{display:none} #hud-slots div.cur span{display:inline} }
+body.touch #hud-vitals{left:50%;transform:translateX(-112%);bottom:calc(6px + env(safe-area-inset-bottom))}
+body.touch #hud-weapon{right:auto;left:50%;transform:translateX(12%);bottom:calc(6px + env(safe-area-inset-bottom))}
+body.touch #hud-vitals b,body.touch #hud-ammo{font-size:20px}

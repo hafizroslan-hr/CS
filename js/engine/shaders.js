@@ -66,3 +66,36 @@ void main(){
   col += uSunCol * (pow(s, 600.0) * 1.2 + pow(s, 12.0) * 0.18);
   frag = vec4(col, 1.0);
 }`;
+
+// Dynamic geometry (characters, weapons, particles): per-vertex colour, no texture.
+// A zero normal marks an unlit vertex (particles, muzzle flash).
+export const DYN_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNormal;
+layout(location=2) in vec4 aColor;
+uniform mat4 uVP;
+out vec3 vPos; out vec3 vN; out vec4 vColor;
+void main(){ vPos = aPos; vN = aNormal; vColor = aColor; gl_Position = uVP * vec4(aPos, 1.0); }`;
+
+export const DYN_FS = `#version 300 es
+precision highp float;
+uniform highp sampler2D uShadow;
+uniform vec3 uSunDir, uSunCol, uAmb, uFogCol, uCam;
+uniform vec4 uShadowP;
+uniform float uFogD, uSunScale;
+in vec3 vPos; in vec3 vN; in vec4 vColor;
+out vec4 frag;
+void main(){
+  if (dot(vN, vN) < 0.01) { frag = vColor; return; }
+  vec3 n = normalize(vN);
+  float lit = uSunScale;
+  if (uShadowP.w > 0.5) {
+    vec2 suv = vPos.xz * uShadowP.xy;
+    if (suv.x > 0.0 && suv.x < 1.0 && suv.y > 0.0 && suv.y < 1.0)
+      lit *= 1.0 - smoothstep(0.04, 0.32, texture(uShadow, suv).r - vPos.y);
+  }
+  vec3 light = uAmb * (0.8 + 0.2 * n.y) + uSunCol * max(dot(n, uSunDir), 0.0) * lit;
+  vec3 col = vColor.rgb * light;
+  float fog = 1.0 - exp(-distance(vPos, uCam) * uFogD);
+  frag = vec4(mix(col, uFogCol, fog), 1.0);
+}`;

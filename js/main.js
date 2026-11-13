@@ -3,9 +3,12 @@ import { settings, matchConfig } from './storage.js';
 import { Renderer } from './engine/renderer.js';
 import { Camera } from './engine/camera.js';
 import { input, initInput, requestLock, releaseLock } from './engine/input.js';
+import { unlockAudio, applyVolume, suspendAudio } from './engine/audio.js';
 import { loadMap } from './maps/map-loader.js';
 import { getMapDef } from './maps/index.js';
 import { Player } from './gameplay/player.js';
+import { Match, TEAM_NAME } from './gameplay/match.js';
+import { Effects } from './gameplay/effects.js';
 import { Menu } from './ui/menu.js';
 import { Hud } from './ui/hud.js';
 import { TouchControls } from './ui/controls.js';
@@ -31,8 +34,9 @@ try {
 const camera = new Camera();
 const player = new Player();
 const hud = new Hud();
-let map = null;
-let state = 'menu';            // menu | playing | paused
+const fx = new Effects();
+let map = null, match = null;
+let state = 'menu';            // menu | playing | paused | result
 let isTouch = window.matchMedia('(pointer: coarse)').matches;
 const portrait = window.matchMedia('(orientation: portrait)');
 
@@ -46,35 +50,37 @@ function setMap(id) {
 function setState(s) {
   state = s;
   const playing = s === 'playing';
-  body.classList.toggle('ingame', s !== 'menu');
+  body.classList.toggle('ingame', playing || s === 'paused');
   body.classList.toggle('touch', isTouch);
   input.enabled = playing;
   if (!playing) input.clear();
-  hud.show(s !== 'menu');
+  hud.show(playing || s === 'paused');
   touch.show(playing && isTouch);
-}
-
-function spawnPlayer() {
-  let team = matchConfig.team;
-  if (team === 'auto') team = Math.random() < 0.5 ? 'att' : 'def';
-  const list = map.spawns[team];
-  player.spawn(list[Math.floor(Math.random() * list.length)]);
+  suspendAudio(s === 'paused');
 }
 
 const touch = new TouchControls(document.getElementById('touch'), { onPause: () => pause() });
 
+function startMatch() {
+  unlockAudio();
+  setMap(matchConfig.map);
+  match = new Match({ map, cfg: matchConfig, player, fx, hud, renderer, onEnd: r => {
+    releaseLock();
+    setTimeout(() => { if (match && match.over) { setState('result'); menu.showResult(r, TEAM_NAME); } }, 1800);
+  } });
+  match.start();
+  menu.hide(); setState('playing');
+  if (!isTouch) requestLock(canvas);
+}
+
 const menu = new Menu({
-  onStart() {
-    setMap(matchConfig.map);
-    spawnPlayer();
-    menu.hide(); setState('playing');
-    if (!isTouch) requestLock(canvas);
-  },
+  onStart: startMatch,
   onResume() { resume(); },
-  onRespawn() { spawnPlayer(); resume(); },
-  onQuit() { releaseLock(); setState('menu'); menu.open('main'); },
+  onRespawn() { if (match) match.spawn(player); resume(); },
+  onQuit() { releaseLock(); match = null; setState('menu'); menu.open('main'); },
   onSettingsChanged(key) {
     if (key === 'quality' || key === '*') renderer.setQuality(settings.quality);
+    applyVolume();
   },
   onEditLayout() {
     menu.suspend(true);
@@ -98,12 +104,13 @@ initInput(canvas, {
     if (touch.editing) return;
     if (state === 'playing') pause();
     else if (state === 'paused' && menu.current === 'pause') resume();
-    else if (menu.current && menu.current !== 'main' && menu.current !== 'pause') menu.back();
+    else if (menu.current && !['main', 'pause', 'result'].includes(menu.current)) menu.back();
   },
   onLockLost() { pause(); }
 });
 
-// ---- browser behaviour: no scroll / zoom / double-tap during play --------------------
+// ---- browser behaviour: audio unlock, no scroll / zoom / double-tap during play -------------
+for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, unlockAudio, { passive: true });
 document.addEventListener('touchmove', e => {
   if (state === 'playing' || touch.editing) e.preventDefault();
 }, { passive: false });
@@ -120,9 +127,8 @@ portrait.addEventListener('change', () => touch.release());
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pause(); });
 canvas.addEventListener('webglcontextrestored', () => location.reload());
 
-// ---- main loop ---------------------------------------------------------------------
+// ---- main loop -----------------------------------------------------------------------------
 let last = performance.now(), fps = 60, lowTime = 0, highTime = 0, menuT = 0;
-const MAX_STEP = 1 / 60;
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -130,11 +136,9 @@ function frame(now) {
   if (dt > 0.25) dt = 0.25;
   if (dt > 0) fps += (1 / dt - fps) * 0.08;
 
-  if (state === 'playing' && !(isTouch && portrait.matches)) {
-    player.applyLook();
-    let rem = Math.min(dt, 0.1);
-    while (rem > 1e-5) { const s = Math.min(rem, MAX_STEP); player.update(s, map.collision); rem -= s; }
-    player.applyToCamera(camera);
+  if (match && state === 'playing' && !(isTouch && portrait.matches)) {
+    match.update(dt, camera);
+    hud.tick(dt);
 
     // adaptive resolution: drop render scale if we stay under 28 fps, restore slowly above 55
     if (fps < 28) { lowTime += dt; highTime = 0; } else if (fps > 55) { highTime += dt; lowTime = 0; } else lowTime = highTime = 0;
@@ -142,18 +146,20 @@ function frame(now) {
     if (highTime > 12 && renderer.scale < 1) { renderer.scale = Math.min(1, renderer.scale + 0.15); highTime = 0; }
 
     hud.setZone(map.name, map.zoneAt(camera.pos[0], camera.pos[2]));
-    hud.setHint(!isTouch && !input.pointerLocked ? 'CLICK TO CAPTURE MOUSE  ·  WASD MOVE  ·  SPACE JUMP  ·  C CROUCH  ·  ESC PAUSE' : '');
-  } else if (state === 'menu') {
+    hud.setHint(!isTouch && !input.pointerLocked ? 'CLICK TO CAPTURE MOUSE  ·  WASD MOVE  ·  CLICK FIRE  ·  R RELOAD  ·  1-6 WEAPONS  ·  G GRENADE' : '');
+  } else if (state === 'menu' || state === 'result') {
     // slow fly-over of the selected map behind the menus
     menuT += dt * 0.06;
     const cx = map.width / 2, cz = map.depth / 2;
     camera.pos[0] = cx + Math.sin(menuT) * map.width * 0.55;
     camera.pos[1] = 30;
     camera.pos[2] = cz + Math.cos(menuT) * map.depth * 0.6;
+    camera.fovY = 58 * Math.PI / 180;
     camera.lookAt(cx, 0, cz);
   }
+  if (match && state !== 'menu' && state !== 'result') match.draw(camera);
   renderer.render(camera);
-  hud.setFps(settings.showFps && state !== 'menu', fps, renderer.scale);
+  hud.setFps(settings.showFps && (state === 'playing' || state === 'paused'), fps, renderer.scale);
 }
 
 setMap(matchConfig.map);
@@ -162,4 +168,4 @@ menu.open('main');
 requestAnimationFrame(frame);
 
 // small debug handle (used by automated tests; harmless in production)
-window.__cs = { player, camera, input, get map() { return map; }, get state() { return state; }, renderer };
+window.__cs = { player, camera, input, get map() { return map; }, get match() { return match; }, get state() { return state; }, renderer };

@@ -52,3 +52,5 @@ button.primary{border-left-color:var(--accent);color:var(--accent2)}
   h2{font-size:18px;margin-bottom:10px;padding-bottom:6px}
 }
 @media (max-width:520px){ .cols{grid-template-columns:1fr} }
+.result-score{font:700 30px var(--font);letter-spacing:.1em;color:var(--text)}
+#result-title.lose{color:#e8735c}

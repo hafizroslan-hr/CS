@@ -1,4 +1,6 @@
-import { WORLD_VS, WORLD_FS, SKY_VS, SKY_FS } from './shaders.js';
+import { WORLD_VS, WORLD_FS, SKY_VS, SKY_FS, DYN_VS, DYN_FS } from './shaders.js';
+import { Batch } from './batch.js';
+import { perspective } from './math.js';
 import { generateTextures, TEX_SIZE } from './textures.js';
 import { VERT_SIZE } from './mesh.js';
 
@@ -42,6 +44,12 @@ export class Renderer {
     this.worldProg = program(gl, WORLD_VS, WORLD_FS);
     this.skyProg = program(gl, SKY_VS, SKY_FS);
     this.skyVao = gl.createVertexArray();
+    this.dynProg = program(gl, DYN_VS, DYN_FS);
+    this.solid = new Batch(gl, 4000);   // characters, grenades (world space, lit)
+    this.fx = new Batch(gl, 1200);      // particles, tracers (world space, alpha blended)
+    this.vm = new Batch(gl, 400);       // first-person weapon (view space)
+    this.vmProj = new Float32Array(16);
+    this.vmLight = 1;                   // how much sun reaches the player (0..1)
 
     // texture array with all procedural surface textures
     const layers = generateTextures();
@@ -140,5 +148,33 @@ export class Renderer {
     gl.bindVertexArray(this.world.vao);
     gl.drawElements(gl.TRIANGLES, this.world.count, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(null);
+
+    // dynamic geometry
+    pr = this.dynProg; gl.useProgram(pr.p);
+    gl.uniformMatrix4fv(pr.u.uVP, false, cam.viewProj);
+    gl.uniform3fv(pr.u.uSunDir, th.sunDir); gl.uniform3fv(pr.u.uSunCol, th.sunColor);
+    gl.uniform3fv(pr.u.uAmb, th.ambient); gl.uniform3fv(pr.u.uFogCol, th.horizon);
+    gl.uniform3fv(pr.u.uCam, cam.pos); gl.uniform1f(pr.u.uFogD, th.fogDensity);
+    gl.uniform1f(pr.u.uSunScale, 1);
+    gl.uniform4f(pr.u.uShadowP, sp[0], sp[1], sp[2], 1);
+    gl.uniform1i(pr.u.uShadow, 1);
+    this.solid.draw();
+    if (this.fx.n) {
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false); gl.disable(gl.CULL_FACE);
+      this.fx.draw();
+      gl.depthMask(true); gl.enable(gl.CULL_FACE); gl.disable(gl.BLEND);
+    }
+    if (this.vm.n) {
+      // weapon view model: own projection, drawn over the world in view space
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      perspective(this.vmProj, 1.15, cam.aspect, 0.02, 10);
+      gl.uniformMatrix4fv(pr.u.uVP, false, this.vmProj);
+      gl.uniform3f(pr.u.uSunDir, 0.35, 0.8, 0.48); gl.uniform3f(pr.u.uCam, 0, 0, 0);
+      gl.uniform1f(pr.u.uFogD, 0); gl.uniform1f(pr.u.uSunScale, this.vmLight);
+      gl.uniform4f(pr.u.uShadowP, 0, 0, 0, 0);
+      this.vm.draw();
+    }
+    this.solid.reset(); this.fx.reset(); this.vm.reset();
   }
 }

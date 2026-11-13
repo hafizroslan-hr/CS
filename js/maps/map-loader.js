@@ -3,6 +3,7 @@
 import { MeshBuilder } from '../engine/mesh.js';
 import { LAYER } from '../engine/textures.js';
 import { CollisionWorld } from '../engine/collision.js';
+import { NavGrid } from '../engine/nav.js';
 
 export const CELL = 2;
 const WALL_H = 5, LOW_H = 1, CEIL_Y = 3.5, ROOF_Y = 3.8, LINTEL_Y = 3.0;
@@ -170,6 +171,21 @@ export function loadMap(def) {
     S[z * sw + x] = best;
   }
 
+  // --- navigation grid: floors and low blocks (stairs/platforms) are walkable ------------
+  const walk = new Uint8Array(cols * rows), navH = new Float32Array(cols * rows);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const k = ch(c, r), i = r * cols + c;
+    if (k >= '1' && k <= '4') { walk[i] = 1; navH[i] = solidH(c, r); }
+    else if (!solidH(c, r) && !CRATES[k]) walk[i] = 1;
+  }
+  const nav = new NavGrid(cols, rows, CELL, walk, navH);
+  // 1 = point receives direct sun, 0 = in shadow (used to light the weapon view model)
+  const sunAt = (x, y, z) => {
+    const px = Math.floor(x * TPM), pz = Math.floor(z * TPM);
+    if (px < 0 || pz < 0 || px >= sw || pz >= sh) return 1;
+    return S[pz * sw + px] - y > 0.2 ? 0 : 1;
+  };
+
   const boxArr = new Float32Array(boxes);
   const zoneAt = (x, z) => {
     const c = Math.floor(x / CELL), r = Math.floor(z / CELL), k = ch(c, r);
@@ -183,7 +199,7 @@ export function loadMap(def) {
     mesh: mb.build(),
     collision: new CollisionWorld(boxArr, width, depth),
     shadow: { data: S, w: sw, h: sh, tpm: TPM },
-    spawns, sites, zoneAt,
+    spawns, sites, zoneAt, nav, sunAt,
     theme: Object.assign({}, th, { sunDir })
   };
 }
