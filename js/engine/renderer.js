@@ -45,7 +45,7 @@ export class Renderer {
     this.skyProg = program(gl, SKY_VS, SKY_FS);
     this.skyVao = gl.createVertexArray();
     this.dynProg = program(gl, DYN_VS, DYN_FS);
-    this.solid = new Batch(gl, 4000);   // characters, grenades (world space, lit)
+    this.solid = new Batch(gl, 9000);   // characters, grenades (world space, lit)
     this.fx = new Batch(gl, 1200);      // particles, tracers (world space, alpha blended)
     this.vm = new Batch(gl, 400);       // first-person weapon (view space)
     this.vmProj = new Float32Array(16);

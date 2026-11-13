@@ -4,29 +4,85 @@ import { identity, translate, rotX, rotY, rotZ } from '../engine/math.js';
 const M = new Float32Array(16), L = new Float32Array(16);
 const SKIN = [0.78, 0.6, 0.47], GUN = [0.2, 0.2, 0.23], STEEL = [0.5, 0.51, 0.55], WOOD = [0.45, 0.29, 0.15];
 const SLEEVE = [0.33, 0.36, 0.3], FLASH = [1, 0.86, 0.45];
+const BLACK = [0.07, 0.07, 0.08];
+// Original faction looks: masked irregulars in earth tones vs. helmeted unit in dark blue.
 const TEAM = {
-  att: { torso: [0.56, 0.4, 0.24], legs: [0.3, 0.26, 0.2], gear: [0.55, 0.14, 0.1] },
-  def: { torso: [0.2, 0.28, 0.4], legs: [0.15, 0.17, 0.22], gear: [0.22, 0.27, 0.24] }
+  att: { cloth: [0.44, 0.38, 0.26], pants: [0.27, 0.25, 0.2], vest: [0.3, 0.21, 0.13], gear: [0.22, 0.16, 0.1], head: [0.19, 0.17, 0.15], boots: [0.13, 0.1, 0.08], glove: [0.2, 0.17, 0.14] },
+  def: { cloth: [0.18, 0.24, 0.35], pants: [0.14, 0.18, 0.27], vest: [0.1, 0.11, 0.14], gear: [0.15, 0.17, 0.2], head: [0.13, 0.15, 0.18], boots: [0.06, 0.06, 0.07], glove: [0.08, 0.08, 0.09] }
 };
+const U = new Float32Array(16), G = new Float32Array(16);
 
+// Soldier: rounded, tapered limbs with knee and elbow joints, shouldered weapon, team gear.
 export function drawActor(b, a) {
   const p = a.body.pos, c = TEAM[a.team];
   identity(M); translate(M, p[0], p[1], p[2]); rotY(M, a.yaw);
   if (!a.alive) rotX(M, a.fall * 1.5);                  // topple backwards
-  const swing = a.alive ? Math.sin(a.walkPhase) * Math.min(a.speed / 4, 1) * 0.65 : 0;
+  const amp = a.alive ? Math.min(a.speed / 4, 1) : 0, ph = a.walkPhase;
+
+  // legs: hip swing + knee bend on the recovering leg
   for (const s of [-1, 1]) {
-    L.set(M); translate(L, s * 0.11, 0.85, 0); rotX(L, s * swing);
-    b.box(L, 0, -0.425, 0, 0.17, 0.85, 0.19, c.legs);
-    L.set(M); translate(L, s * 0.29, 1.4, 0); rotX(L, 1.25);
-    b.box(L, 0, -0.26, 0, 0.12, 0.55, 0.12, c.torso);
+    const sw = Math.sin(ph) * s;
+    L.set(M); translate(L, s * 0.095, 0.93, 0); rotX(L, sw * 0.45 * amp + 0.05);
+    b.cyl(L, 0, -0.46, 0, 0, 0.072, 0.08, 0.098, 0.105, c.pants);
+    b.ball(L, 0, -0.46, 0, 0.072, 0.072, 0.08, c.pants, -Math.PI / 2, 3);
+    translate(L, 0, -0.46, 0); rotX(L, -(0.1 + 0.85 * amp * Math.max(0, -sw)));
+    b.cyl(L, 0, -0.4, 0, 0, 0.052, 0.058, 0.07, 0.078, c.pants);
+    b.box(L, 0, -0.43, -0.035, 0.1, 0.1, 0.25, c.boots);
   }
-  b.box(M, 0, 1.15, 0, 0.46, 0.6, 0.25, c.torso);
-  b.box(M, 0, 1.6, 0, 0.24, 0.26, 0.24, SKIN);
-  b.box(M, 0, 1.73, 0, 0.27, 0.1, 0.27, c.gear);
-  b.box(M, 0, 1.12, 0.15, 0.3, 0.36, 0.08, c.gear);      // backpack / plate
-  const long = a.inv.def.id === 'pistol' || a.inv.def.id === 'revolver' ? 0.26 : 0.62;
-  b.box(M, 0.12, 1.27, -0.3 - long / 2, 0.06, 0.1, long, GUN);
-  if (a.flashT > 0) b.box(M, 0.12, 1.27, -0.36 - long, 0.2, 0.2, 0.06, FLASH, true);
+  b.cyl(M, 0, 0.82, 0.98, 0, 0.15, 0.105, 0.165, 0.11, c.pants);
+  b.cyl(M, 0, 0.93, 0.99, 0, 0.172, 0.118, 0.172, 0.118, c.gear);       // belt
+
+  // upper body leans slightly into the weapon
+  U.set(M); translate(U, 0, 0.93, 0); rotX(U, -0.1 - amp * 0.05);
+  b.cyl(U, 0, 0, 0.5, 0, 0.165, 0.105, 0.2, 0.118, c.cloth, true);
+  b.cyl(U, 0, 0.1, 0.45, 0, 0.185, 0.128, 0.212, 0.136, c.vest, true, true);
+  b.box(U, -0.075, 0.2, -0.14, 0.085, 0.11, 0.05, c.gear);                // pouches
+  b.box(U, 0.03, 0.2, -0.14, 0.085, 0.11, 0.05, c.gear);
+  b.box(U, 0, 0.29, 0.15, 0.25, 0.3, 0.09, c.gear);                        // pack
+  b.cyl(U, 0, 0.48, 0.58, 0, 0.05, 0.052, 0.048, 0.05, a.team === 'att' ? c.head : SKIN);
+  if (a.team === 'att') {
+    b.ball(U, 0, 0.675, -0.005, 0.094, 0.115, 0.102, c.head);              // balaclava
+    b.box(U, 0, 0.695, -0.082, 0.125, 0.034, 0.045, SKIN);                  // eye slit
+    b.cyl(U, 0, 0.5, 0.56, 0.01, 0.075, 0.08, 0.065, 0.07, [0.45, 0.14, 0.1]);   // scarf
+  } else {
+    b.ball(U, 0, 0.675, -0.005, 0.09, 0.112, 0.098, SKIN);
+    b.ball(U, 0, 0.69, 0.006, 0.108, 0.115, 0.122, c.head, -0.45, 4);        // helmet
+    b.box(U, 0, 0.7, -0.092, 0.135, 0.042, 0.03, BLACK);                    // goggles
+    b.box(U, 0, 0.62, -0.085, 0.09, 0.05, 0.03, c.head);                    // mask
+  }
+
+  // arms: right hand on the grip, left hand forward on the handguard
+  const pistol = a.inv.def.id === 'pistol' || a.inv.def.id === 'revolver' || a.inv.def.melee;
+  for (const s of [-1, 1]) {
+    L.set(U); translate(L, s * 0.215, 0.44, 0);
+    b.ball(L, 0, 0, 0, 0.066, 0.066, 0.07, c.cloth, -Math.PI / 2, 3);
+    if (s > 0) { rotY(L, 0.25); rotX(L, pistol ? 0.75 : 0.35); } else { rotY(L, pistol ? -0.5 : -0.68); rotX(L, pistol ? 0.85 : 0.95); }
+    b.cyl(L, 0, -0.28, 0, 0, 0.044, 0.046, 0.058, 0.06, c.cloth);
+    translate(L, 0, -0.28, 0); rotX(L, s > 0 ? (pistol ? 0.85 : 1.65) : (pistol ? 0.75 : 0.65));
+    b.ball(L, 0, 0, 0, 0.045, 0.045, 0.047, c.cloth, -Math.PI / 2, 3);
+    b.cyl(L, 0, -0.25, 0, 0, 0.036, 0.038, 0.044, 0.046, c.cloth);
+    b.ball(L, 0, -0.285, 0, 0.04, 0.05, 0.042, c.glove, -Math.PI / 2, 3);
+  }
+
+  // weapon
+  G.set(U); translate(G, 0.125, 0.33, 0);
+  let muzzle;
+  if (pistol) {
+    b.box(G, 0, -0.02, -0.5, 0.03, 0.045, 0.17, GUN);
+    b.box(G, 0, -0.07, -0.44, 0.028, 0.08, 0.04, BLACK);
+    muzzle = -0.6;
+  } else {
+    const wood = a.inv.def.id === 'shotgun' || a.inv.def.id === 'rifle';
+    b.box(G, 0, 0, -0.33, 0.045, 0.07, 0.3, GUN);                           // receiver
+    b.box(G, 0, 0.012, -0.64, 0.022, 0.022, 0.34, BLACK);                   // barrel
+    b.box(G, 0, -0.005, -0.54, 0.04, 0.045, 0.2, wood ? WOOD : GUN);        // handguard
+    b.box(G, 0, -0.012, -0.09, 0.035, 0.065, 0.2, wood ? WOOD : GUN);       // stock
+    b.box(G, 0, -0.065, -0.24, 0.03, 0.075, 0.035, BLACK);                  // grip
+    if (!wood) b.box(G, 0, -0.085, -0.37, 0.028, 0.12, 0.05, BLACK);        // magazine
+    b.box(G, 0, 0.048, -0.3, 0.012, 0.022, 0.06, BLACK);                    // sight
+    muzzle = -0.83;
+  }
+  if (a.flashT > 0) b.box(G, 0, 0.01, muzzle, 0.18, 0.18, 0.05, FLASH, true);
 }
 
 export function drawGrenade(b, g) {
@@ -62,7 +118,7 @@ export function drawViewModel(b, id, vm, aim, bobX, bobY) {
   translate(M, 0.2 * k + bobX * k, -0.2 * k - 0.105 * aim + bobY * k - vm.lower * 0.35, -0.62 + vm.kick * 0.08 + 0.1 * aim);
   rotX(M, vm.kick * 0.22 - vm.lower * 0.9);
   rotY(M, 0.035 * k);
-  if (id === 'prybar') { rotX(M, 0.85 - vm.swing * 1.7); rotZ(M, -0.3 + vm.swing * 0.5); }
+  if (id === 'prybar') { rotX(M, 0.55 - vm.swing * 1.5); rotZ(M, -0.5 + vm.swing * 0.6); }
   for (const q of m.parts) b.box(M, q[0], q[1], q[2], q[3], q[4], q[5], q[6]);
   if (vm.flash > 0 && m.muzzle) {
     const s = 0.07 + Math.random() * 0.06;

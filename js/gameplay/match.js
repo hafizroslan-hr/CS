@@ -299,8 +299,9 @@ export class Match {
     for (const a of this.actors) {
       if (a === pl) continue;
       drawActor(r.solid, a);
+      r.fx.disc(a.body.pos[0], a.body.pos[1] + 0.03, a.body.pos[2], 0.42, 0, 0, 0, 0.3);   // blob shadow
       if (a.alive && a.team === pl.team) {      // team-mate marker
-        const p = a.body.pos, s = 0.07;
+        const p = a.body.pos, s = 0.045;
         r.fx.quad(p[0], p[1] + 2.05, p[2], cam.right[0] * s, 0, cam.right[2] * s, 0, s, 0, 0.35, 0.9, 0.45, 0.85);
       }
     }
