@@ -1,0 +1,22 @@
+:root{
+  --bg:#101316; --panel:#191e22; --panel2:#20262b; --line:#3a444c; --text:#cfd6d9; --dim:#7f8b93;
+  --accent:#e0a030; --accent2:#f4c463; --danger:#c8452f;
+  --font:"Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
+  overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;background:#000}
+.hidden{display:none !important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#fatal{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;
+  padding:24px;text-align:center;font-size:18px;line-height:1.5;letter-spacing:.04em}
+#rotate{position:fixed;inset:0;z-index:90;background:rgba(10,12,14,.96);display:none;align-items:center;justify-content:center;text-align:center}
+.rotate-box p{font-size:22px;letter-spacing:.2em;margin:18px 0 6px;color:var(--accent)}
+.rotate-box small{color:var(--dim);letter-spacing:.08em}
+.rotate-icon{width:54px;height:90px;border:3px solid var(--text);border-radius:8px;margin:0 auto;animation:rot 2.2s ease-in-out infinite}
+@keyframes rot{0%,25%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){ body.touch.ingame #rotate{display:flex} }

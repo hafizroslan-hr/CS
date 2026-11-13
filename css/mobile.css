@@ -1,0 +1,21 @@
+#touch{position:fixed;z-index:15;touch-action:none;
+  top:env(safe-area-inset-top);right:env(safe-area-inset-right);bottom:env(safe-area-inset-bottom);left:env(safe-area-inset-left)}
+.tc{position:absolute;transform-origin:center;touch-action:none}
+.tc-stick{width:120px;height:120px;border-radius:50%;border:2px solid rgba(207,214,217,.35);background:rgba(16,19,22,.28)}
+.tc-knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
+  background:rgba(207,214,217,.35);border:2px solid rgba(224,160,48,.7)}
+.tc-btn{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font:700 10px var(--mono);letter-spacing:.08em;color:rgba(233,240,244,.85);
+  border:2px solid rgba(207,214,217,.4);background:rgba(16,19,22,.35)}
+.tc-btn.small{width:44px;height:44px;border-radius:6px}
+.tc-btn.on,.tc-btn.latched{background:rgba(224,160,48,.45);border-color:var(--accent)}
+#touch.editing{background:rgba(10,12,14,.82);z-index:40}
+#touch.editing .tc{outline:1px dashed rgba(207,214,217,.5);outline-offset:4px}
+#touch.editing .tc.sel{outline:2px solid var(--accent)}
+.tc-toolbar{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:none;gap:6px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);padding:6px}
+#touch.editing .tc-toolbar{display:flex}
+.tc-toolbar span{font:11px var(--mono);color:var(--dim);letter-spacing:.08em;padding:0 6px;white-space:nowrap}
+.tc-toolbar button{height:34px;min-width:44px;padding:0 10px;background:var(--panel2);border:1px solid var(--line);
+  font-size:13px;letter-spacing:.12em;color:var(--text)}
+.tc-toolbar button:active{color:var(--accent)}
